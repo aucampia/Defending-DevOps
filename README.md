@@ -1,5 +1,9 @@
 # Defending Modern DevOps Environments (Kubernetes Edition)
 
+```bash
+git clone https://github.com/aucampia/Defending-DevOps.git
+```
+
 This repository contains all of the labs for the two-day "Defending Modern DevOps Course" by Manicode Secure Coding Education
 
 ## Useful `kubectl` Commands
@@ -16,6 +20,7 @@ kubectl cluster-info
 # View node info
 kubectl describe nodes
 ```
+
 View API Resources
 ```
 kubectl api-resources -o wide
