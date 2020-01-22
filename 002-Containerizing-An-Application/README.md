@@ -11,7 +11,7 @@ Open up the files in `src/link-unshorten` in your favorite IDE or the Cloud Shel
 ### Task 2: Build the Docker Image
 In the `src/link-unshorten` directory run the following command (substituting <yourname> with your own identifier) to build the image on the Cloud Shell VM:
 ```
-docker build -t <yourname>/link-unshorten:0.1 .
+docker build -t docker.io/iwana/link-unshorten:0.1 .
 ```
 
 Inspect your Docker images:
@@ -22,7 +22,14 @@ docker images
 ### Task 3: Run the Docker Image
 To run the application using Docker use the following command:
 ```
-docker run -d -p 8080:8080 <yourname>/link-unshorten:0.1
+docker container rm --force --volumes luns-tmp
+#docker run --name luns-tmp -d -p 8080:8080 docker.io/iwana/link-unshorten:0.1
+
+docker run --name luns-tmp -e PORT=8514 -d -p 8080:8514 docker.io/iwana/link-unshorten:0.1
+curl --silent http://localhost:8080/api/check?url=bit.ly/test | jq
+
+docker container exec -it luns-tmp bash
+docker container logs luns-tmp
 ```
 
 Make sure the image is running without any errors:
@@ -62,10 +69,10 @@ exit
 docker stop <container_name>
 
 # Uncomment the User lines in the Dockerfile then build the new image
-docker build -t <yourname>/link-unshorten:0.2 .
+docker build -t docker.io/iwana/link-unshorten:0.2 .
 
 # Run the image
-docker run -d -p 8080:8080 <yourname>/link-unshorten:0.2
+docker run -d -p 8080:8080 docker.io/iwana/link-unshorten:0.2
 ```
 
 4. Run the following command to ensure you are no longer running as root:
@@ -77,9 +84,20 @@ docker exec -it <container_name> /bin/bash
 # Once you are in the shell run the following commands
 whoami
 groups nonrootuser
+
+# can just use id command
 ```
 
 ### Bonus 1: Use the `--user` flag in `docker run` to run the original container as a non-root user.
+
+```bash
+docker container rm --force --volumes luns-tmp-asroot
+docker run --rm --user root --name luns-tmp-asroot -d -p 31103:8080 docker.io/iwana/link-unshorten:0.1
+curl --silent http://localhost:31103/api/check?url=bit.ly/test | jq
+
+docker container exec -it luns-tmp-asroot bash
+ps -ef | grep unshorten-api
+```
 
 ### Bonus 2: Change the value for `port` in main.go to an environment variable instead of a hardcoded value
 
@@ -97,3 +115,8 @@ Hint 4: You will need to run `docker stop` on the first running container before
 Install `dive` in Cloud Shell and inspect the unshorten image that was created.
 
 Hint 1: Install using the instructions for Ubuntu/Debian.
+
+```bash
+go get github.com/wagoodman/dive
+dive docker.io/iwana/link-unshorten:0.1
+```
