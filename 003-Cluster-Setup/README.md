@@ -7,6 +7,7 @@
 
 We will create a new Namespace for every Kubernetes lab and switch contexts to ensure it is the default when using `kubectl`.
 ```
+kubectl delete ns lab003
 kubectl create ns lab003 && \
 kubectl config set-context $(kubectl config current-context) --namespace lab003 && \
 echo "Default Namespace Switched:" $(kubectl get sa default -o jsonpath='{.metadata.namespace}')
@@ -39,11 +40,16 @@ Note: DO NOT CHANGE IMAGE NAME TO YOUR OWN - THIS IS AN IMAGE ON DOCKER HUB
 
 ```
 kubectl run --generator=run-pod/v1 link-unshorten --image=jmbmxer/link-unshorten:0.1 --port=8080
+kubectl exec link-unshorten -it -- uname -a
+kubectl exec link-unshorten -it -- ps -ef
+kubectl exec link-unshorten -it -- sh
+kubectl exec link-unshorten -it -- curl --silent http://localhost:8080/api/check?url=bit.ly/test | jq
 ```
 
 2. Take a look at your running Pods and make sure the container has been created successfully:
 ```
 kubectl get pods
+kubectl get pod link-unshorten -o yaml
 ```
 
 3. You will see that this command did NOT create a Deployment. This creation method is not recommended for production workloads.
@@ -60,6 +66,7 @@ kubectl describe pod link-unshorten
 5. Run the following command to view more info about the Pod you just created. We use the `-l` flag here to tell Kubernetes to only get pods with the Label of `run=link-unshorten` which is the default label given to this particular Pod:
 ```
 kubectl get pods -l run=link-unshorten -o yaml
+kubectl get pods --selector=run=link-unshorten -o yaml
 ```
 
 6. We can use grep to extract the IP address that was assigned to our Pod:
@@ -102,6 +109,7 @@ kubectl describe svc link-unshorten
 3. Visit the IP address listed in the terminal in your browser (labeled as `LoadBalancer Ingress`. Don't forget to add the API endpoint path.
 ```
 http://<EXTERNAL-IP>:8080/api/check?url=bit.ly/test
+curl http://$(kubectl get svc link-unshorten -o json | jq -r '.status.loadBalancer.ingress[0].ip'):8080/api/check?url=bit.ly/test
 ```
 4. This is no way to manage a real Kubernetes cluster. Tear down your app using the following commands:
 ```
@@ -137,6 +145,7 @@ kubectl describe svc link-unshorten-service
 6. Similar to how we interacted with our application earlier, we use the IP from the above output and paste it into our browser.
 ```
 http://<EXTERNAL-IP>/api/check?url=bit.ly/test
+curl http://$(kubectl get svc link-unshorten-service -o json | jq -r '.status.loadBalancer.ingress[0].ip'):80/api/check?url=bit.ly/test
 ```
 
 ### Task 5: Scale
@@ -209,8 +218,35 @@ exit
 ### Bonus
  A critical RCE vulnerability was just reported through a bug bounty and was fixed late into the night. Roll out a new version of the app (0.2) in your cluster to patch the vulnerability on each of your three running pods. No downtime allowed! Show the deployment history using `kubectl rollout history`
 
+```
+--- a/003-Cluster-Setup/manifests/link-unshorten-deployment.yaml
++++ b/003-Cluster-Setup/manifests/link-unshorten-deployment.yaml
+@@ -22,16 +22,16 @@ spec:
+     spec:
+       containers:
+       - name: unshorten-api-container
+-        image: "jmbmxer/link-unshorten:0.1"
++        image: "jmbmxer/link-unshorten:0.2"
+         imagePullPolicy: Always
+         ports:
+         - containerPort: 8080
+           name: http
+```
+
+```
+kubectl replace -f link-unshorten-deployment.yaml
+```
+
 ### Bonus 2
 The new version you just rolled out contains a critical bug! Quickly rollback the deployment to 0.1 (Yes, 0.1 is the vulnerable version, but this is just for practice!)
+
+```
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment
+kubectl rollout history deployment.v1.apps/link-unshorten
+kubectl rollout history deployment.v1.apps/link-unshorten --revision=2
+kubectl rollout undo deployment.v1.apps/link-unshorten
+kubectl rollout undo deployment.v1.apps/link-unshorten --to-revision=2
+```
 
 ### Task 5: Cleanup
 Don't forget to delete the `lab003` namespace when you are done with the Bonuses.

@@ -22,16 +22,16 @@ spec:
     spec:
       containers:
       - name: unshorten-api-container
-        image: "jmbmxer/link-unshorten:0.1"
+        image: "jmbmxer/link-unshorten:0.2"
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
           protocol: TCP
-      # # You can even have multiple containers running in a Pod
-      # - name: unshorten-redis-cache
-      #   image: redis
-      #   ports:
-      #   - containerPort: 6379
-      #     name: redis
-      #     protocol: TCP
+      # You can even have multiple containers running in a Pod
+      - name: unshorten-redis-cache
+        image: redis
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
