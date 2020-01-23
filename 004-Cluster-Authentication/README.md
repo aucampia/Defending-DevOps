@@ -7,12 +7,12 @@ We will be setting up our cluster with two namespaces - `development` and `produ
 ### Lab Setup
 Your GCP Project has two end users provisioned with the following permissions:
 ```
-User 1: <your-username>@manicode.us
+User 1: ndc16@manicode.us@manicode.us
 Roles:
 Kubernetes Engine Admin
 Editor
 
-User 2: <your-intern-email>@manicode.us
+User 2: ndc16intern@manicode.us@manicode.us
 Roles:
 Minimal GKE Role
 Browser
@@ -28,13 +28,18 @@ container.clusters.getCredentials
 ### Task 1: Launch Your Infrastructure
 First, we will spin up our application in both a `development` and `production` namespace.
 
-Note: You should be logged in to Cloud Shell using the admin account provided at the beginning of class to run the following commands, NOT `<your-intern-email>@manicode.us`.
+Note: You should be logged in to Cloud Shell using the admin account provided at the beginning of class to run the following commands, NOT `ndc16intern@manicode.us@manicode.us`.
 
 We need to retrieve the credentials of our running cluster using the following `gcloud` command. This command updates our kubeconfig in Cloud Shell file with appropriate credentials and endpoint information to point kubectl at a specific cluster in Google Kubernetes Engine.
 
 ```
+gcloud config configurations activate ndc20-admin
+gcloud info
+
 # Use gcloud get-credentials to retrieve the cert
-gcloud container clusters get-credentials $(gcloud container clusters list --format json | jq -r '.[].name') --zone us-west1-a --project $GOOGLE_CLOUD_PROJECT
+\rm -v ~/.kube/config
+gcloud --configuration=ndc20-admin container clusters get-credentials $(gcloud --configuration=ndc20-admin container clusters list --format json | jq -r '.[].name') --zone us-west1-a --project $(gcloud --configuration=ndc20-admin projects list --format json | jq -r '.[].name')
+kubectl get pods --namespace=development
 ```
 Now we launch our pods and services for each Namespace:
 ```
@@ -65,16 +70,21 @@ kubectl get pods --all-namespaces
 Take note of this process. Our user has full administrative access to our cluster due to being provisioned with the `Kubernetes Engine Admin` role. We will now see how RBAC helps give us granular access control at the object-level within our cluster.
 
 ### Task 2: Authenticate as a Restricted User
-We will now log in using a separate user who has very locked down access to the entire project. In an incognito window browse to `cloud.google.com` and authenticate with the user `<your-intern-email>@manicode.us` and the same password that was provided to you for the admin user.
+We will now log in using a separate user who has very locked down access to the entire project. In an incognito window browse to `cloud.google.com` and authenticate with the user `ndc16intern@manicode.us@manicode.us` and the same password that was provided to you for the admin user.
 
 Note: *Using the same password for multiple accounts is bad. Don't do this at home.*
 
 Now open up Cloud Shell and use the following `gcloud get-credentials` command to retrieve the credentials for your user so we can start interacting with the cluster. This is the same cluster you just launched the `production` and `development` infrastructure in.
 
 ```
-# Authenticate to the cluster
+https://console.cloud.google.com/
 
-gcloud container clusters get-credentials $(gcloud container clusters list --format json | jq -r '.[].name') --zone us-west1-a --project $GOOGLE_CLOUD_PROJECT
+# Authenticate to the cluster
+gcloud config configurations activate ndc20-user
+gcloud info
+
+\rm -v ~/.kube/config
+gcloud --configuration=ndc20-user container clusters get-credentials $(gcloud --configuration=ndc20-user container clusters list --format json | jq -r '.[].name') --zone us-west1-a --project $(gcloud --configuration=ndc20-user projects list --format json | jq -r '.[].name')
 ```
 Now, attempt to run some `kubectl` queries on the cluster.
 ```
@@ -83,7 +93,7 @@ kubectl get pods --namespace=development
 kubectl get secrets
 kubectl run link-unshorten --image=jmbmxer/link-unshorten:0.1 --port=8080
 ```
-These should all fail with a `Forbidden` error. While <your-intern-email>@manicode.us does technically have an account on the cluster, RBAC is stopping it from accessing any of the objects.
+These should all fail with a `Forbidden` error. While ndc16intern@manicode.us@manicode.us does technically have an account on the cluster, RBAC is stopping it from accessing any of the objects.
 
 One simple way to quickly check what permissions your user has is to use `can-i`:
 ```
@@ -110,6 +120,7 @@ kubectl get clusterrole/admin -o yaml
 ```
 
 Now, add User 1 to the Default ClusterRole and ClusterRoleBinding called `cluster-admin`
+
 ```
 kubectl create clusterrolebinding cluster-admin-binding \
   --clusterrole cluster-admin \
@@ -125,9 +136,9 @@ yes
 ```
 
 ### Task 4: Create RBAC Rules
-Our user `<your-intern-email>@manicode.us` is a restricted user so we only want to grant access to read pods in the `development` namespace and nothing more. We will use RBAC to enforce a policy
+Our user `ndc16intern@manicode.us@manicode.us` is a restricted user so we only want to grant access to read pods in the `development` namespace and nothing more. We will use RBAC to enforce a policy
 
-Now, open the file `user-role-binding.yaml` in the `manifests/role` directory and replace <your-intern-email> with the one provided to you. It will be the same as your admin account but with the word `intern` at the end (eg. `manicode0003intern@manicode.us`).
+Now, open the file `user-role-binding.yaml` in the `manifests/role` directory and replace ndc16intern@manicode.us with the one provided to you. It will be the same as your admin account but with the word `intern` at the end (eg. `manicode0003intern@manicode.us`).
 ```
 # In the manifests/role directory
 kubectl create -f .
@@ -136,7 +147,7 @@ kubectl get role --all-namespaces
 
 ### Task 5: Verify Pods can be Accessed by the Intern
 
-Switch back to the Cloud Shell for `<your-intern-email>@manicode.us` and run the following commands:
+Switch back to the Cloud Shell for `ndc16intern@manicode.us@manicode.us` and run the following commands:
 ```
 kubectl get pods --namespace=development
 # success

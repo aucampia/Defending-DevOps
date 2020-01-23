@@ -14,4 +14,9 @@ spec:
   supplementalGroups:
     rule: RunAsAny
   volumes:
-  - '*'
+  - 'configMap'
+  - 'downwardAPI'
+  - 'emptyDir'
+  - 'persistentVolumeClaim'
+  - 'secret'
+  - 'projected'
