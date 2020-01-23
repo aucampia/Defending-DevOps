@@ -21,6 +21,10 @@ kubectl create clusterrolebinding cluster-admin-binding \
 
 Download and extract the Istio release:
 ```
+mkdir -p ~/.local/opt
+curl -L --silent https://github.com/istio/istio/releases/download/1.1.13/istio-1.1.13-linux.tar.gz | bsdtar -xvf - -C ~/.local/opt/
+cd ~/.local/opt/istio-1.1.13/
+
 wget https://github.com/istio/istio/releases/download/1.1.13/istio-1.1.13-linux.tar.gz && \
   tar -xvzf istio-1.1.13-linux.tar.gz && \
   cd istio-1.1.13
@@ -79,6 +83,8 @@ kubectl create -f .
 The unshorten service will spin up a load balancer. Ensure the API is accessible. Now that our pod is managed by Istio, we are not going to use the link-unshorten-service IP address as in previous labs. We will use the service provisioned by Istio called `istio-ingressgateway` to grab the routable IP address of the API.
 ```
 kubectl -n istio-system get service istio-ingressgateway
+
+curl --silent http://$(kubectl -n istio-system get service istio-ingressgateway -o json | jq -r '.status.loadBalancer.ingress[0].ip'):80/api/check?url=bit.ly/test
 ```
 
 Up until version 1.0, Istio’s default behavior was to block access to external endpoints which created connectivity issues and applications were breaking until all endpoints were configured. We are using a version of Istio that newer than 1.0 so egress is not blocked by default.
@@ -96,9 +102,11 @@ Once the rules are created, try to visit the API again and you should be able to
 ```
 http://35.197.37.188/api/check?url=https://bit.ly/hi
 # This should resolve normally
+curl --silent http://$(kubectl -n istio-system get service istio-ingressgateway -o json | jq -r '.status.loadBalancer.ingress[0].ip'):80/api/check?url=bit.ly/hi
 
 http://35.197.37.188/api/check?url=https://tinyurl.com/news
 # This should NOT resolve
+curl --silent http://$(kubectl -n istio-system get service istio-ingressgateway -o json | jq -r '.status.loadBalancer.ingress[0].ip'):80/api/check?url=https://tinyurl.com/news
 ```
 
 ### Bonus
@@ -119,4 +127,5 @@ kubectl delete -f api -f istio-rules
 Now, disable Istio:
 ```
 kubectl delete ns istio-system
+kubectl delete clusterrolebinding cluster-admin-binding
 ```
