@@ -42,11 +42,13 @@ kubectl get svc
 In your browser visit the IP address provided at `EXTERNAL-IP`. For example:
 ```
 http://35.197.56.177/api/check?url=bit.ly/test
+curl --silent http://$(kubectl get svc link-unshorten-service -o json | jq -r '.status.loadBalancer.ingress[0].ip' | tee /dev/stderr):80/api/check?url=bit.ly/test
 ```
 Note: The order in which these pods are deployed matters. Make sure MySQL is up first before launching the API.
 
 6. After everything is running and healthy, let's look under the hood at the environment variable that was injected into the link-unshorten Pod:
 ```
+kubectl exec -it $(kubectl get pod -o json | jq -r '.items[].metadata.name' | grep link-unshort | head -1) /bin/bash
 kubectl exec -it <link-unshorten-podname> /bin/bash
 # Once you have a shell in the container run the following
 env | grep UNSHORTEN_DB_PASSWORD
@@ -92,6 +94,8 @@ kubectl get secret mysql-secrets -o yaml
 kubectl create -f .
 # In manifests/api
 kubectl create -f .
+
+curl --silent http://$(kubectl get svc link-unshorten-service -o json | jq -r '.status.loadBalancer.ingress[0].ip' | tee /dev/stderr):80/api/check?url=bit.ly/test
 ```
 
 Everything should now be up and running.
